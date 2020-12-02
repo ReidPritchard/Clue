@@ -1,0 +1,189 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  font-family: "Texturina", serif;
+
+  background-color: #333;
+  height: 100vh;
+  width: 100vw;
+
+  overflow: hidden;
+}
+
+#title {
+  font-size: 50px;
+
+  color: white;
+
+  position: absolute;
+  top: 0;
+  left: 30px;
+}
+
+#turn {
+  font-size: 20px;
+
+  color: white;
+
+  position: absolute;
+  top: 0;
+  right: 30px;
+}
+
+#game-settings {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  color: white;
+
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: space-around;
+
+  border-color: white;
+  border-style: solid;
+  border-width: 2px;
+}
+
+#game-settings * {
+  margin: 20px;
+}
+
+#canvas {
+  width: 100vw;
+  height: 100vh;
+}
+
+#diceRoll {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+  z-index: 99;
+  transform: translate(-50%, -50%);
+
+  color: white;
+  background-color: #333;
+  opacity: 0;
+
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: space-around;
+
+  padding: 50px;
+  width: 200px;
+
+  border-color: white;
+  border-style: solid;
+  border-width: 2px;
+}
+
+#diceRoll div {
+  display: flex;
+
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: space-around;
+}
+
+#d1 {
+  margin: 5px;
+  text-align: center;
+}
+
+#d2 {
+  margin: 5px;
+  text-align: center;
+}
+
+#possibleRooms {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+  z-index: 9;
+  transform: translate(-50%, -50%);
+
+  color: white;
+  background-color: #333;
+
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: space-around;
+
+  padding: 50px;
+  width: 200px;
+
+  border-color: white;
+  border-style: solid;
+  border-width: 2px;
+}
+
+.moveHere {
+  margin-left: 10px;
+  float: right;
+}
+
+#possibleRooms ul {
+  list-style: none;
+}
+
+#form {
+  position: absolute;
+
+  top: 50%;
+  left: 50%;
+  z-index: 9;
+  transform: translate(-50%, -50%);
+
+  color: white;
+  background-color: #333;
+
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: space-around;
+
+  padding: 50px;
+  width: 200px;
+
+  border-color: white;
+  border-style: solid;
+  border-width: 2px;
+}
+
+#form div {
+  padding: 5px 0;
+}
+
+#form input {
+  float: right;
+}
+
+#cardView {
+  position: absolute;
+
+  top: 10%;
+  right: 30px;
+
+  width: auto;
+  height: auto;
+
+  color: white;
+  background-color: #333;
+
+  padding: 20px 50px;
+
+  border-color: white;
+  border-style: solid;
+  border-width: 2px;
+}
