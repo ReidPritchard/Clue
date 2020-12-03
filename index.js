@@ -21,16 +21,19 @@ class Game {
 		return this._whosTurn;
 	}
 
-	set turn(oRide) {
-		// randomly set who goes first
+	set turn(oRide) {   
+		// randomly set who goes first 
 		if (oRide != null) {
 			this._whosTurn = oRide;
 		} else {
 			this._whosTurn = Math.floor(Math.random() * this._players.length);
 		}
-
-		// console.log('turn: ', this._whosTurn, this._players);
 	}
+
+	nextTurn() {
+	  this._whosTurn =
+      this._whosTurn + 1 < this._players.length ? this._whosTurn + 1 : 0;
+  }
 
 	run() {
 		// Ok here we go.
@@ -56,41 +59,64 @@ class Game {
 
 		let possible = currPlayer.loc.findConnections(d1 + d2);
 		showPossibleRooms(possible, currPlayer.isBot, d1 + d2, (room) => {
+		  let oldRoom = currPlayer.loc;
 			// Leave current room
-			currPlayer.loc.leavePerson(currPlayer);
+			currPlayer.leaveRoom();
 			// Enter new room
 			currPlayer.loc = room;
 			room.enterPerson(currPlayer);
+
+			$("#possibleRooms").remove();
+
+			// console.log("did the room update right??", currPlayer, oldRoom, room, currPlayer.loc);
+
 			this.displayRooms();
 
 			// Begin accuse or suggest process
-			console.log("begin ac/sug process");
+			// console.log("begin ac/sug process");
 			if (!currPlayer.isBot) {
 				showSuggestAccuseForm(
 					currPlayer,
 					this._people,
 					this._weapons,
 					(isAccuse, person, weapon) => {
+					  console.log(person, weapon, room);
 						if (isAccuse == "suggest") {
-							this.suggestion(person, weapon, room);
+							this.suggestion(person, weapon, room, () => {
+							  console.log("Nice, time to move on");
+							  this.nextTurn();
+							  this.run();
+              });
 						} else {
-							this.accuse(person, weapon, room);
+							this.accuse(person, weapon, room, (didWin) => {
+							  // holy fuck did they win??
+              });
 						}
 					}
 				);
 			} else {
-				let roomSuggest = currPlayer.tracker.pickRoom(possible);
-				let characterSuggest = currPlayer.tracker.pickPerson();
-				let weaponSuggest = currPlayer.tracker.pickWeapon();
+			  setTimeout( () => {
+          let person = currPlayer.tracker.pickPerson();
+          let weapon = currPlayer.tracker.pickWeapon();
+          let room = currPlayer.tracker.pickRoom(possible);
+
+          console.log("NOTHING WOKRKS");
+          console.log(person, weapon, room);
+          this.suggestion(person, weapon, room, () => {
+            this.nextTurn();
+            this.run();
+          });
+        }, 500);
 			}
 		});
 	}
 
-	suggestion(person, weapon, room) {
+	suggestion(person, weapon, room, callback) {
 		let currPlayer = this._players[this.turn];
-		let player_index = this.turn;
-		for (let c = 0; c < this.players.length; c++) {
-			if (this._players[player_index] !== currPlayer) {
+		let player_index = this.turn+1;
+
+    let found = false;
+		for (let c = 0; c < this.players.length-1 && !found; c++) {
 				// show this player is checking their cards
 				// if they have a card
 				//  show the user the card
@@ -98,28 +124,44 @@ class Game {
 				// if they don't say they can't help and move on
 				let checkPlayer = this._players[player_index];
 				let maybeCard = checkPlayer.hasCard(person, weapon, room);
+				// console.log(maybeCard, checkPlayer);
 				if (maybeCard) {
-					console.log(checkPlayer, "can help!!");
-					console.log(maybeCard);
+				  console.log(maybeCard, typeof(maybeCard));
+				  maybeCard = typeof(maybeCard) == "string" ? maybeCard : maybeCard.name;
+
+				  if (currPlayer.isBot) {
+            console.log("bot got something :0");
+				    showCanHelp(true, checkPlayer.character, maybeCard, () => {
+				      callback();
+            });
+          } else {
+				    showCanHelp(false, checkPlayer.character, maybeCard, () => {
+				      callback();
+            });
+          }
+          found = true;
 				} else {
-					console.log(checkPlayer.name, "can't help");
+				  showNoHelp(checkPlayer.character, () => {
+				    console.log('why tf does it just give up???');
+				    // idk what to do here, just like chill for a second?
+          });
 				}
 			}
 			player_index =
 				player_index < this._players.length - 1 ? player_index + 1 : 0;
-		}
 	}
 
-	accuse(person, weapon, room) {
+	accuse(person, weapon, room, callback) {
 		if (
 			this._secret_three["person"] == person &&
 			this._secret_three["weapon"] == weapon &&
 			this._secret_three["room"] == room
 		) {
 			console.log("HOLY SHIT YOU DID IT");
-			// how do you end the game???
+			callback(true);
 		} else {
 			// End the game for you, but you're wrong :((
+			callback(false);
 		}
 	}
 
@@ -244,11 +286,7 @@ class Room {
 	}
 
 	leavePerson(p) {
-		let i = this._people.indexOf(p);
-
-		// console.log(i, this._people, this._people.splice(i, 1));
-		this._people = this._people.splice(i, 1);
-		// console.log(this._people);
+		this._people = this._people.filter((pp) => {return pp.character != p.character });
 	}
 
 	get connections() {
@@ -320,27 +358,25 @@ class Tracker {
 	}
 
 	pickRoom(possible) {
-		possible.forEach((room) => {
-			if (!this._seenRooms.indexOf(room)) {
-				return room;
-			}
-		});
+	  return possible.find(item => this._seenRooms.indexOf(item) < 0);
 	}
 
 	pickPerson() {
-		this._characters.forEach((character) => {
-			if (!this._seenChars.indexOf(character)) {
-				return character;
-			}
-		});
+	  return this._characters.find(item => this._seenChars.indexOf(item) < 0);
+		// this._characters.forEach((character) => {
+		// 	if (!this._seenChars.indexOf(character)) {
+		// 		return character;
+		// 	}
+		// });
 	}
 
 	pickWeapon() {
-		this._weapons.forEach((weapon) => {
-			if (!this._seenWeapons.indexOf(weapon)) {
-				return weapon;
-			}
-		});
+	  return this._weapons.find(item => this._seenWeapons.indexOf(item) < 0);
+		// this._weapons.forEach((weapon) => {
+		// 	if (!this._seenWeapons.indexOf(weapon)) {
+		// 		return weapon;
+		// 	}
+		// });
 	}
 }
 
@@ -356,6 +392,14 @@ class Player {
 			this._tracker = new Tracker(people, weapons, rooms);
 		}
 	}
+
+	get loc() {
+	  return this._loc;
+  }
+
+  set loc(l) {
+    this._loc = l;
+  }
 
 	get isBot() {
 		return this._isBot;
@@ -377,20 +421,18 @@ class Player {
 		}
 	}
 
+	leaveRoom() {
+	  this._loc.leavePerson(this);
+  }
+
 	hasCard(person, weapon, room) {
+	  let found = false;
 		this._cards.forEach((card) => {
-			// console.log(card, person);
-			// console.log(card, weapon);
-			// console.log(card, room);
-			if (card === person) {
-				return person;
-			} else if (card === weapon) {
-				return weapon;
-			} else if (card == room) {
-				return room;
-			}
-    });
-		return false;
+			if (card === person || card === weapon || card == room) {
+        found = card;
+      }
+		});
+    return found;
 	}
 
 	get cards() {
@@ -647,16 +689,15 @@ function drawRoom(context, room, posx, posy, r) {
 	// Text
 	// https://www.w3schools.com/graphics/canvas_text.asp
 	context.textAlign = "center";
+  // console.log("Drawing this room's people", room);
 	if (room.people.length == 0) {
 		context.fillStyle = "#888888";
 	} else {
     context.fillStyle = "#FFF";
     let p_off = r / 2;
-    console.log(room);
 		room.people.forEach((p) => {
-      console.log(p);
-			context.fillText(p.character, posx, posy + p_off);
-			p_off += 10;
+      context.fillText(p.character, posx, posy + p_off);
+      p_off += 10;
 		});
 	}
 	context.fillText(room.name, posx, posy);
@@ -756,7 +797,11 @@ function showPossibleRooms(possible, isBot, rollSum, callback) {
 
 		if (isBot) {
 			// pick room based on tracker
-			callback(possible[Math.floor(Math.random() * possible.length)]);
+			setTimeout(() => {
+        callback(possible[Math.floor(Math.random() * possible.length)]);
+			  console.log('oh god nothing works', $("#possibleRooms"));
+				$("#possibleRooms").remove();
+      }, 1000);
 		} else {
 			// let user pick room (event listener)
 			$(".moveHere").on("click", (e) => {
@@ -813,6 +858,7 @@ function showSuggestAccuseForm(currPlayer, people, weapons, callback) {
 			let w = $("#weapons").val();
 			// console.log(a);
 			callback(a, p, w);
+			$("#form").remove();
 		}
 	});
 }
@@ -834,6 +880,68 @@ function displayCards(cards) {
 	cardsHTML += "</div>";
 
 	$("main").append(cardsHTML);
+}
+
+function showCanHelp(isBot, helpName, card, callback) {
+  if (isBot) {
+    let canHelpHTML = "<div class='centered' id='canHelp'>"
+
+    canHelpHTML += `<h3>${helpName} can help!</h3>`
+
+    canHelpHTML += "</div>"
+    $("main").leave("#form", () => {
+      $("main").append(canHelpHTML);
+    });
+  } else {
+    let canHelpHTML = "<div class='centered' id='canHelp'>"
+
+    canHelpHTML += `<h3>${helpName} can help! They have the ${card} card.</h3>`
+    canHelpHTML += "<button id='gotIt'>Got it!</button>"
+
+    canHelpHTML += "</div>"
+
+//     console.log("OKKUR");
+//     $("main").leave("#form", () => {
+
+//       $("main").leave("#noHelp", () => {
+
+        console.log("OKKUR????");
+        $("main").append(canHelpHTML);
+
+        $("#gotIt").on("click", (e) => {
+          console.log('clicked', e.currentTarget);
+          $("#canHelp").remove();
+          callback();
+        });
+
+      // });
+
+    // });
+  }
+}
+
+function showNoHelp(name, callback) {
+  let noHelpHTML = "<div class='centered' id='noHelp'>"
+  noHelpHTML += `<h3>${name} can't help :(</h3>`
+  noHelpHTML += "</div>"
+
+  if ($("#noHelp").length) {
+    $("main").leave("#noHelp", () => {
+      $("main").append(noHelpHTML);
+
+      setTimeout(() => {
+        $("#noHelp").remove();
+        callback();
+      }, 1000);
+    });
+  } else {
+    $("main").append(noHelpHTML);
+
+    setTimeout(() => {
+      $("#noHelp").remove();
+      callback();
+    }, 1000);
+  }
 }
 
 // Stolen from
