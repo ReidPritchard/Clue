@@ -21,8 +21,8 @@ class Game {
 		return this._whosTurn;
 	}
 
-	set turn(oRide) {   
-		// randomly set who goes first 
+	set turn(oRide) {
+		// randomly set who goes first
 		if (oRide != null) {
 			this._whosTurn = oRide;
 		} else {
@@ -31,9 +31,9 @@ class Game {
 	}
 
 	nextTurn() {
-	  this._whosTurn =
-      this._whosTurn + 1 < this._players.length ? this._whosTurn + 1 : 0;
-  }
+		this._whosTurn =
+			this._whosTurn + 1 < this._players.length ? this._whosTurn + 1 : 0;
+	}
 
 	run() {
 		// Ok here we go.
@@ -55,100 +55,112 @@ class Game {
 
 		let d1 = Math.floor(Math.random() * 6);
 		let d2 = Math.floor(Math.random() * 6);
-		showDiceRoll(currPlayer.isBot, d1, d2);
+		showDiceRoll(currPlayer.isBot, d1, d2, () => {
+			let possible = currPlayer.loc.findConnections(d1 + d2);
+			showPossibleRooms(possible, currPlayer.isBot, d1 + d2, (room) => {
+				// let oldRoom = currPlayer.loc;
+				// Leave current room
+				currPlayer.leaveRoom();
+				// Enter new room
+				currPlayer.loc = room;
+				room.enterPerson(currPlayer);
 
-		let possible = currPlayer.loc.findConnections(d1 + d2);
-		showPossibleRooms(possible, currPlayer.isBot, d1 + d2, (room) => {
-		  let oldRoom = currPlayer.loc;
-			// Leave current room
-			currPlayer.leaveRoom();
-			// Enter new room
-			currPlayer.loc = room;
-			room.enterPerson(currPlayer);
+				$("#possibleRooms").remove();
 
-			$("#possibleRooms").remove();
+				// console.log("did the room update right??", currPlayer, oldRoom, room, currPlayer.loc);
 
-			// console.log("did the room update right??", currPlayer, oldRoom, room, currPlayer.loc);
+				this.displayRooms();
 
-			this.displayRooms();
-
-			// Begin accuse or suggest process
-			// console.log("begin ac/sug process");
-			if (!currPlayer.isBot) {
-				showSuggestAccuseForm(
-					currPlayer,
-					this._people,
-					this._weapons,
-					(isAccuse, person, weapon) => {
-					  console.log(person, weapon, room);
-						if (isAccuse == "suggest") {
-							this.suggestion(person, weapon, room, () => {
-							  console.log("Nice, time to move on");
-							  this.nextTurn();
-							  this.run();
-              });
-						} else {
-							this.accuse(person, weapon, room, (didWin) => {
-							  // holy fuck did they win??
-              });
+				// Begin accuse or suggest process
+				// console.log("begin ac/sug process");
+				if (!currPlayer.isBot) {
+					showSuggestAccuseForm(
+						currPlayer,
+						this._people,
+						this._weapons,
+						(isAccuse, person, weapon) => {
+							console.log(person, weapon, room);
+							if (isAccuse == "suggest") {
+								this.suggestion(person, weapon, room, () => {
+									console.log("Nice, time to move on");
+									setTimeout(() => {
+										this.nextTurn();
+										this.run();
+									}, 1000);
+								});
+							} else {
+								this.accuse(person, weapon, room, (didWin) => {
+									// holy fuck did they win??
+									if (didWin) {
+										alert("YOU WON!!! THE GAME DOESN'T EVEN WORK WHATTT");
+									} else {
+										alert("You lost :( the game will now stop");
+										let refresh =
+											"<button class='centered' onClick='window.location.reload();'>Play again?</button>";
+										$("main").append(refresh);
+									}
+								});
+							}
 						}
-					}
-				);
-			} else {
-			  setTimeout( () => {
-          let person = currPlayer.tracker.pickPerson();
-          let weapon = currPlayer.tracker.pickWeapon();
-          let room = currPlayer.tracker.pickRoom(possible);
+					);
+				} else {
+					setTimeout(() => {
+						let person = currPlayer.tracker.pickPerson();
+						let weapon = currPlayer.tracker.pickWeapon();
+						let room = currPlayer.tracker.pickRoom(possible);
 
-          console.log("NOTHING WOKRKS");
-          console.log(person, weapon, room);
-          this.suggestion(person, weapon, room, () => {
-            this.nextTurn();
-            this.run();
-          });
-        }, 500);
-			}
+						// console.log("NOTHING WOKRKS");
+						console.log(person, weapon, room);
+						this.suggestion(person, weapon, room, () => {
+							setTimeout(() => {
+								this.nextTurn();
+								this.run();
+							}, 1000);
+						});
+					}, 500);
+				}
+			});
 		});
 	}
 
 	suggestion(person, weapon, room, callback) {
 		let currPlayer = this._players[this.turn];
-		let player_index = this.turn+1;
+		let player_index = this.turn + 1 < this._players.length ? this.turn + 1 : 0;
 
-    let found = false;
-		for (let c = 0; c < this.players.length-1 && !found; c++) {
-				// show this player is checking their cards
-				// if they have a card
-				//  show the user the card
-				//  show user that a card was shown (check isBot with currPlayer)
-				// if they don't say they can't help and move on
-				let checkPlayer = this._players[player_index];
-				let maybeCard = checkPlayer.hasCard(person, weapon, room);
-				// console.log(maybeCard, checkPlayer);
-				if (maybeCard) {
-				  console.log(maybeCard, typeof(maybeCard));
-				  maybeCard = typeof(maybeCard) == "string" ? maybeCard : maybeCard.name;
+		let found = false;
+		for (var c = 0; c < this.players.length - 1 && !found; c++) {
+			// show this player is checking their cards
+			// if they have a card
+			//  show the user the card
+			//  show user that a card was shown (check isBot with currPlayer)
+			// if they don't say they can't help and move on
+			let checkPlayer = this._players[player_index];
+			let maybeCard = checkPlayer.hasCard(person, weapon, room);
+			// console.log(maybeCard, checkPlayer);
+			if (maybeCard) {
+				console.log(maybeCard, typeof maybeCard);
+				maybeCard = typeof maybeCard == "string" ? maybeCard : maybeCard.name;
 
-				  if (currPlayer.isBot) {
-            console.log("bot got something :0");
-				    showCanHelp(true, checkPlayer.character, maybeCard, () => {
-				      callback();
-            });
-          } else {
-				    showCanHelp(false, checkPlayer.character, maybeCard, () => {
-				      callback();
-            });
-          }
-          found = true;
+				if (currPlayer.isBot) {
+					showCanHelp(true, checkPlayer.character, maybeCard, () => {
+						callback();
+					});
 				} else {
-				  showNoHelp(checkPlayer.character, () => {
-				    console.log('why tf does it just give up???');
-				    // idk what to do here, just like chill for a second?
-          });
+					showCanHelp(false, checkPlayer.character, maybeCard, () => {
+						callback();
+					});
 				}
+				found = true;
+			} else {
+				// showNoHelp(checkPlayer.character);
 			}
 			player_index =
 				player_index < this._players.length - 1 ? player_index + 1 : 0;
+		}
+		if (!found && !currPlayer.isBot) {
+			alert("No one can help!");
+			callback();
+		}
 	}
 
 	accuse(person, weapon, room, callback) {
@@ -286,7 +298,9 @@ class Room {
 	}
 
 	leavePerson(p) {
-		this._people = this._people.filter((pp) => {return pp.character != p.character });
+		this._people = this._people.filter((pp) => {
+			return pp.character != p.character;
+		});
 	}
 
 	get connections() {
@@ -358,11 +372,11 @@ class Tracker {
 	}
 
 	pickRoom(possible) {
-	  return possible.find(item => this._seenRooms.indexOf(item) < 0);
+		return possible.find((item) => this._seenRooms.indexOf(item) < 0);
 	}
 
 	pickPerson() {
-	  return this._characters.find(item => this._seenChars.indexOf(item) < 0);
+		return this._characters.find((item) => this._seenChars.indexOf(item) < 0);
 		// this._characters.forEach((character) => {
 		// 	if (!this._seenChars.indexOf(character)) {
 		// 		return character;
@@ -371,7 +385,7 @@ class Tracker {
 	}
 
 	pickWeapon() {
-	  return this._weapons.find(item => this._seenWeapons.indexOf(item) < 0);
+		return this._weapons.find((item) => this._seenWeapons.indexOf(item) < 0);
 		// this._weapons.forEach((weapon) => {
 		// 	if (!this._seenWeapons.indexOf(weapon)) {
 		// 		return weapon;
@@ -394,12 +408,12 @@ class Player {
 	}
 
 	get loc() {
-	  return this._loc;
-  }
+		return this._loc;
+	}
 
-  set loc(l) {
-    this._loc = l;
-  }
+	set loc(l) {
+		this._loc = l;
+	}
 
 	get isBot() {
 		return this._isBot;
@@ -422,17 +436,17 @@ class Player {
 	}
 
 	leaveRoom() {
-	  this._loc.leavePerson(this);
-  }
+		this._loc.leavePerson(this);
+	}
 
 	hasCard(person, weapon, room) {
-	  let found = false;
+		let found = false;
 		this._cards.forEach((card) => {
 			if (card === person || card === weapon || card == room) {
-        found = card;
-      }
+				found = card;
+			}
 		});
-    return found;
+		return found;
 	}
 
 	get cards() {
@@ -450,12 +464,23 @@ const people = [
 	"Mr. Green",
 	"Mrs. White",
 	"Dr. Plum",
-	"Dr. Violet",
 	"Ms. Scarlet",
 	"General Mustard",
+	"Dr. Violet",
+	"Sir Lance",
+	"Madam Monique",
+	"Lord McLovin'",
 ];
 
-const weapons = ["Knife", "Gun", "Candle Stick", "Rope", "Nunchucks", "Pencil"];
+const weapons = [
+	"Paper Cut",
+	"Revolver",
+	"Candle Stick",
+	"Nunchucks",
+	"Pencil",
+	"Peanut Allergy",
+	"Deadly Stare",
+];
 
 let study = new Room("Study");
 let library = new Room("Library");
@@ -631,6 +656,11 @@ $(function () {
 	});
 });
 
+// $(window).resize(function () {
+// 	$("#canvas").attr("width", $(window).width());
+// 	$("#canvas").attr("height", $(window).height());
+// });
+
 // Game Functions
 
 function runGame(numPlayers, meChar) {
@@ -689,22 +719,22 @@ function drawRoom(context, room, posx, posy, r) {
 	// Text
 	// https://www.w3schools.com/graphics/canvas_text.asp
 	context.textAlign = "center";
-  // console.log("Drawing this room's people", room);
+	// console.log("Drawing this room's people", room);
 	if (room.people.length == 0) {
 		context.fillStyle = "#888888";
 	} else {
-    context.fillStyle = "#FFF";
-    let p_off = r / 2;
+		context.fillStyle = "#FFF";
+		let p_off = r / 2;
 		room.people.forEach((p) => {
-      context.fillText(p.character, posx, posy + p_off);
-      p_off += 10;
+			context.fillText(p.character, posx, posy + p_off);
+			p_off += 10;
 		});
 	}
 	context.fillText(room.name, posx, posy);
 }
 
-function showDiceRoll(isBot, d1, d2) {
-	let dice_html = "<div id='diceRoll'>";
+function showDiceRoll(isBot, d1, d2, callback) {
+	var dice_html = "<div id='diceRoll'>";
 	dice_html += "<div><label>Dice One: </label><div id='d1'>0</div>";
 	dice_html += "<label>Dice Two: </label><div id='d2'>0</div></div>";
 	if (!isBot) dice_html += "<button id='rollDie'>Roll the Dice</button>";
@@ -715,8 +745,8 @@ function showDiceRoll(isBot, d1, d2) {
 
 	anime({
 		targets: "#diceRoll",
-		opacity: "100%",
-		delay: 1000,
+		opacity: 1,
+		delay: 3500,
 		duration: 2000,
 	});
 
@@ -749,11 +779,17 @@ function showDiceRoll(isBot, d1, d2) {
 			dice1.text = d1;
 			dice2.text = d2;
 
-			setTimeout(() => {
-				// TODO: add nice animation
-				$("#diceRoll").remove();
-			}, 1000);
-		}, 1000);
+			anime({
+				targets: "#diceRoll",
+				opacity: 0,
+				duration: 500,
+				complete: () => {
+					// TODO: add nice animation
+					$("#diceRoll").remove();
+					callback();
+				},
+			});
+		}, 8000);
 	} else {
 		$("#rollDie").on("click", () => {
 			// stop animation
@@ -770,6 +806,7 @@ function showDiceRoll(isBot, d1, d2) {
 			setTimeout(() => {
 				// TODO: add nice animation
 				$("#diceRoll").remove();
+				callback();
 			}, 2500);
 		});
 	}
@@ -777,48 +814,64 @@ function showDiceRoll(isBot, d1, d2) {
 
 function showPossibleRooms(possible, isBot, rollSum, callback) {
 	// Wow arrive.js is SO nice
-	$("main").leave("#diceRoll", () => {
-		let possibleHTML = "<div id='possibleRooms'><h4>Possible Rooms:</h4>";
-		possibleHTML += `<h5>Total roll of ${rollSum}</h5>`;
+	// $("main").leave("#diceRoll", () => {
+	var possibleHTML = "";
 
-		possibleHTML += "<ul>";
-		possible.forEach((room, index) => {
-			possibleHTML += `<li class='roomOption'>${room.name}`;
-			if (!isBot) {
-				possibleHTML += `<button class='moveHere' value='${index}'>Move Here</button>`;
-			}
-			possibleHTML += "</li>";
-		});
+	possibleHTML += "<div id='possibleRooms'><h4>Possible Rooms:</h4>";
+	possibleHTML += `<h5>Total roll of ${rollSum}</h5>`;
 
-		possibleHTML += "</ul></div>";
-
-		// TODO: add nice animation
-		$("main").append(possibleHTML);
-
-		if (isBot) {
-			// pick room based on tracker
-			setTimeout(() => {
-        callback(possible[Math.floor(Math.random() * possible.length)]);
-			  console.log('oh god nothing works', $("#possibleRooms"));
-				$("#possibleRooms").remove();
-      }, 1000);
-		} else {
-			// let user pick room (event listener)
-			$(".moveHere").on("click", (e) => {
-				// console.log(e.currentTarget.value);
-				// console.log(possible[room_index]);
-				let room_index = e.currentTarget.value;
-				callback(possible[room_index]);
-
-				// TODO: add nice animation
-				$("#possibleRooms").remove();
-			});
+	possibleHTML += "<ul>";
+	possible.forEach((room, index) => {
+		possibleHTML += `<li class='roomOption'>${room.name}`;
+		if (!isBot) {
+			possibleHTML += `<button class='moveHere' value='${index}'>Move Here</button>`;
 		}
+		possibleHTML += "</li>";
 	});
+
+	possibleHTML += "</ul></div>";
+
+	// TODO: add nice animation
+	$("main").append(possibleHTML);
+
+	if (isBot) {
+		// pick room based on tracker
+		setTimeout(() => {
+			anime({
+				targets: "#possibleRooms",
+				opacity: 0,
+				duration: 500,
+				complete: function () {
+					$("#possibleRooms").remove();
+					callback(possible[Math.floor(Math.random() * possible.length)]);
+				},
+			});
+		}, 1000);
+	} else {
+		// let user pick room (event listener)
+		$(".moveHere").on("click", (e) => {
+			// console.log(e.currentTarget.value);
+			// console.log(possible[room_index]);
+			let room_index = e.currentTarget.value;
+
+			// $("#possibleRooms").remove();
+			anime({
+				targets: "#possibleRooms",
+				opacity: 0,
+				duration: 500,
+				complete: function () {
+					$("#possibleRooms").remove();
+					callback(possible[room_index]);
+				},
+			});
+		});
+	}
+	// });
 }
 
 function showSuggestAccuseForm(currPlayer, people, weapons, callback) {
-	let formHTML = "<div id='form'>";
+	var formHTML = "";
+	formHTML += "<div id='form'>";
 	formHTML += "<div>";
 	formHTML += '<label for="suggest">Suggest</label>';
 	formHTML +=
@@ -850,21 +903,34 @@ function showSuggestAccuseForm(currPlayer, people, weapons, callback) {
 
 	$("main").append(formHTML);
 
-	$("#submit").on("click", (e) => {
+	anime({
+		targets: "#form",
+		opacity: [0, 1],
+		duration: 500,
+	});
+
+	$("#submit").on("click", () => {
 		let a = $("input[name='accuse']:checked").val();
 		if (a) {
 			// console.log("clicked", e);
 			let p = $("#people").val();
 			let w = $("#weapons").val();
 			// console.log(a);
-			callback(a, p, w);
-			$("#form").remove();
+			anime({
+				targets: "#form",
+				opacity: [0, 1],
+				duration: 500,
+				complete: () => {
+					callback(a, p, w);
+					$("#form").remove();
+				},
+			});
 		}
 	});
 }
 
 function displayCards(cards) {
-	let cardsHTML = "<div id='cardView'>";
+	var cardsHTML = "<div id='cardView'>";
 	cardsHTML += "<h4>Your Cards: </h4>";
 	cardsHTML += "<ul>";
 
@@ -883,66 +949,75 @@ function displayCards(cards) {
 }
 
 function showCanHelp(isBot, helpName, card, callback) {
-  if (isBot) {
-    let canHelpHTML = "<div class='centered' id='canHelp'>"
+	console.log("showing help");
+	if (isBot) {
+		var canHelpHTML = "<div class='centered' id='canHelp'>";
 
-    canHelpHTML += `<h3>${helpName} can help!</h3>`
+		canHelpHTML += `<h3>${helpName} can help!</h3>`;
 
-    canHelpHTML += "</div>"
-    $("main").leave("#form", () => {
-      $("main").append(canHelpHTML);
-    });
-  } else {
-    let canHelpHTML = "<div class='centered' id='canHelp'>"
+		canHelpHTML += "</div>";
 
-    canHelpHTML += `<h3>${helpName} can help! They have the ${card} card.</h3>`
-    canHelpHTML += "<button id='gotIt'>Got it!</button>"
+		console.log(canHelpHTML);
+		$("main").append(canHelpHTML);
 
-    canHelpHTML += "</div>"
+		setTimeout(() => {
+			$("#canHelp").remove();
+			callback();
+		}, 1000);
+	} else {
+		var canHelpHTML = "<div class='centered' id='canHelp'>";
 
-//     console.log("OKKUR");
-//     $("main").leave("#form", () => {
+		canHelpHTML += `<h3>${helpName} can help! They have the ${card} card.</h3>`;
+		canHelpHTML += "<button id='gotIt'>Got it!</button>";
 
-//       $("main").leave("#noHelp", () => {
+		canHelpHTML += "</div>";
 
-        console.log("OKKUR????");
-        $("main").append(canHelpHTML);
+		//     console.log("OKKUR");
+		//     $("main").leave("#form", () => {
 
-        $("#gotIt").on("click", (e) => {
-          console.log('clicked', e.currentTarget);
-          $("#canHelp").remove();
-          callback();
-        });
+		// $("main").leave("#noHelp", function() {
 
-      // });
+		$("main").append(canHelpHTML);
 
-    // });
-  }
+		$("#gotIt").on("click", (e) => {
+			console.log("clicked", e.currentTarget);
+			$("#canHelp").remove();
+			callback();
+		});
+
+		// });
+
+		// });
+	}
 }
 
-function showNoHelp(name, callback) {
-  let noHelpHTML = "<div class='centered' id='noHelp'>"
-  noHelpHTML += `<h3>${name} can't help :(</h3>`
-  noHelpHTML += "</div>"
+// function showNoHelp(name) {
+//   let noHelpHTML = "<div class='centered' id='noHelp'>"
+//   noHelpHTML += `<h3>${name} can't help :(</h3>`
+//   noHelpHTML += "</div>"
 
-  if ($("#noHelp").length) {
-    $("main").leave("#noHelp", () => {
-      $("main").append(noHelpHTML);
+//   console.log('showNoHelp');
 
-      setTimeout(() => {
-        $("#noHelp").remove();
-        callback();
-      }, 1000);
-    });
-  } else {
-    $("main").append(noHelpHTML);
+//   console.log($("#noHelp"));
+//   if ($("#noHelp").length >= 1) {
+//     // $("main").leave("#noHelp", function() {
+//     $("#noHelp").remove();
+//     appendHTML(noHelpHTML, "#noHelp", 1000);
+//     // });
+//   } else {
+//     appendHTML(noHelpHTML, "#noHelp", 1000);
+//   }
+// }
 
-    setTimeout(() => {
-      $("#noHelp").remove();
-      callback();
-    }, 1000);
-  }
-}
+// function appendHTML(html, id, timeout) {
+//   console.log('where tf is this getting called from????');
+//   $("main").append(html);
+
+//   setTimeout(() => {
+//     $(id).remove();
+//     return;
+//   }, timeout);
+// }
 
 // Stolen from
 // https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
